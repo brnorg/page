@@ -1,0 +1,16 @@
+
+[
+  {
+    "name": "Default Template",
+    "structure": {
+      "development": {
+        "vars": {
+          "API_URL": "https://apis.example.com"
+        },
+        "secrets": {
+          "API_KEY": ""
+        }
+      }
+    }
+  }
+]
