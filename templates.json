@@ -5,7 +5,7 @@
     "structure": {
       "development": {
         "vars": {
-          "API_URL": "https://apis.example.com"
+          "API_URL": "https://api.example.com"
         },
         "secrets": {
           "API_KEY": ""
