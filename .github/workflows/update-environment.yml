@@ -21,40 +21,18 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v2
         with:
-          node-version: '18' 
+          node-version: '14'  # ou a versão que você preferir
 
       - name: Install Dependencies
         run: |
-          npm install libsodium-wrappers axios
-
-      - name: Validate PAT and Repository Access
-        run: |
-          USER_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.pat }}" \
-            https://api.github.com/user)
-          
-          if echo "$USER_RESPONSE" | grep -q "Bad credentials"; then
-            echo "Error: Invalid PAT provided"
-            exit 1
-          fi
-          
-          REPO_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.pat }}" \
-            https://api.github.com/repos/${{ github.event.inputs.repository }})
-          
-          if echo "$REPO_RESPONSE" | grep -q "Not Found"; then
-            echo "Error: Repository not found or no access"
-            exit 1
-          fi
-          
-          echo "PAT and repository access validated successfully"
+          npm install @octokit/rest libsodium-wrappers
 
       - name: Process Environment Structure
         run: |
           echo '${{ github.event.inputs.structure }}' > environment.json
-          
-          # Chamar o script de criptografia
-          node encrypt_secret.js "${{ github.event.inputs.pat }}" "${{ github.event.inputs.repository }}" "environment.json"
+          node update_environment.js "${{ github.event.inputs.pat }}" "${{ github.event.inputs.repository }}" "environment.json"
 
       - name: Cleanup
         run: rm environment.json
