@@ -27,7 +27,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          npm install @octokit/rest libsodium-wrappers
+          npm install @octokit/rest@^21.0.0 libsodium-wrappers@^0.7.13
 
       - name: Process Environment Structure
         run: |
