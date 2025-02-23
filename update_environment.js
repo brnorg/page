@@ -77,3 +77,52 @@ async function listEnvironmentsAndDetails() {
         if (variable) {
           if (keyValuePair.value) {
             // Atualizar variável
+            // Atualizar variável
+            try {
+              await octokit.request('PATCH /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}', {
+                owner: repo.split('/')[0],
+                repo: repo.split('/')[1],
+                environment_name: environment.name,
+                name: keyValuePair.name,
+                value: keyValuePair.value
+              });
+              console.log(`Updated variable ${keyValuePair.name} in environment ${environment.name}`);
+            } catch (error) {
+              console.error(`Erro ao atualizar a variável ${keyValuePair.name} no ambiente ${environment.name}: ${error.message}`);
+            }
+          }
+        } else if (secret) {
+          if (keyValuePair.value) {
+            // Criptografar o valor do segredo
+            const binkey = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL);
+            const binsec = sodium.from_string(keyValuePair.value);
+            const encBytes = sodium.crypto_box_seal(binsec, binkey);
+            const encryptedValue = sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL);
+
+            // Atualizar segredo
+            try {
+              await octokit.request('PUT /repos/{owner}/{repo}/environments/{environment_name}/secrets/{secret_name}', {
+                owner: repo.split('/')[0],
+                repo: repo.split('/')[1],
+                environment_name: environment.name,
+                secret_name: keyValuePair.name,
+                encrypted_value: encryptedValue,
+                key_id: publicKeyId
+              });
+              console.log(`Updated secret ${keyValuePair.name} in environment ${environment.name}`);
+            } catch (error) {
+              console.error(`Erro ao atualizar o segredo ${keyValuePair.name} no ambiente ${environment.name}: ${error.message}`);
+            }
+          }
+        } else {
+          console.log(`No matching variable or secret found for ${keyValuePair.name} in environment ${environment.name}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`Erro: ${error.message}`);
+  }
+}
+
+// Executar a função principal
+listEnvironmentsAndDetails();
