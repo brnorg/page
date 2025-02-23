@@ -75,6 +75,41 @@ jobs:
             local repo=$4
             local token=$5
             
+            # Criar arquivo temporário para o script Node.js
+            cat << 'EOF' > encrypt_secret.js
+            const sodium = require('libsodium-wrappers');
+
+            async function encryptSecret(publicKey, secret) {
+              // Aguarda o libsodium estar pronto
+              await sodium.ready;
+              
+              // Converte a chave pública e o segredo para Uint8Array
+              const binkey = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL)
+              const binsec = sodium.from_string(secret)
+              
+              // Criptografa o segredo
+              const encBytes = sodium.crypto_box_seal(binsec, binkey)
+              
+              // Converte para Base64
+              return sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL)
+            }
+
+            // Obtem a chave pública e o segredo dos argumentos
+            const publicKey = process.argv[2];
+            const secret = process.argv[3];
+
+            // Executa a criptografia e imprime o resultado
+            encryptSecret(publicKey, secret)
+              .then(encrypted => console.log(encrypted))
+              .catch(err => {
+                console.error(err);
+                process.exit(1);
+              });
+            EOF
+            
+            # Instala o libsodium-wrappers
+            npm install libsodium-wrappers
+            
             # Obter chave pública do repositório
             PUBLIC_KEY_RESPONSE=$(curl -s -H "Authorization: Bearer $token" \
               "https://api.github.com/repos/$repo/actions/secrets/public-key")
@@ -82,20 +117,16 @@ jobs:
             KEY_ID=$(echo "$PUBLIC_KEY_RESPONSE" | jq -r .key_id)
             PUBLIC_KEY=$(echo "$PUBLIC_KEY_RESPONSE" | jq -r .key)
             
-            # Criar arquivo temporário com a chave pública em formato PEM
-            echo "-----BEGIN PUBLIC KEY-----" > public_key.pem
-            echo "$PUBLIC_KEY" | fold -w 64 >> public_key.pem
-            echo "-----END PUBLIC KEY-----" >> public_key.pem
+            # Criptografa o segredo usando o script Node.js
+            ENCRYPTED_SECRET=$(node encrypt_secret.js "$PUBLIC_KEY" "$secret_value")
             
-            # Criptografar o segredo usando a chave pública
-            ENCRYPTED_SECRET=$(echo -n "$secret_value" | openssl pkeyutl -encrypt -pubin \
-              -inkey public_key.pem -pkeyopt rsa_padding_mode:oaep \
-              -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256 | base64 -w 0)
+            # Remove arquivos temporários
+            rm encrypt_secret.js
+            rm package.json
+            rm package-lock.json
+            rm -rf node_modules
             
-            # Remover arquivo temporário
-            rm public_key.pem
-            
-            # Enviar o segredo criptografado
+            # Envia o segredo criptografado
             curl -X PUT \
               -H "Authorization: Bearer $token" \
               -H "Accept: application/vnd.github.v3+json" \
