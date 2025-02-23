@@ -11,8 +11,8 @@ jobs:
       - name: get
         run: |
           mkdir local.txt
-          echo ${{ secrets.NOVASECRET }} >> local.txt
-          echo ${{ secrets.BANCO }} >> local.txt
+          echo "${{ secrets.NOVASECRET }}" >> local.txt
+          echo "${{ secrets.BANCO }}" >> local.txt
         
 
       - name: Upload a Build Artifact
