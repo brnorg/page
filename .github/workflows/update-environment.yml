@@ -17,9 +17,20 @@ jobs:
   update-environment:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'  # ou a versão que você preferir
+
+      - name: Install Dependencies
+        run: |
+          npm install libsodium-wrappers axios
+
       - name: Validate PAT and Repository Access
         run: |
-          # Validar o PAT tentando obter informações do usuário
           USER_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.pat }}" \
             https://api.github.com/user)
           
@@ -28,7 +39,6 @@ jobs:
             exit 1
           fi
           
-          # Validar acesso ao repositório
           REPO_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.pat }}" \
             https://api.github.com/repos/${{ github.event.inputs.repository }})
           
@@ -43,72 +53,8 @@ jobs:
         run: |
           echo '${{ github.event.inputs.structure }}' > environment.json
           
-          # Funções auxiliares
-          create_or_update_environment() {
-            local env_name=$1
-            local repo=$2
-            local token=$3
-            
-            # Verificar se o ambiente existe
-            ENV_RESPONSE=$(curl -s -H "Authorization: Bearer $token" \
-              "https://api.github.com/repos/$repo/environments/$env_name")
-            
-            if echo "$ENV_RESPONSE" | grep -q "Not Found"; then
-              # Criar ambiente se não existir
-              curl -X PUT \
-                -H "Authorization: Bearer $token" \
-                -H "Accept: application/vnd.github.v3+json" \
-                "https://api.github.com/repos/$repo/environments/$env_name" \
-                -d '{}'
-              
-              echo "Environment $env_name created"
-            else
-              echo "Environment $env_name already exists"
-            fi
-          }
-          
-          create_or_update_secret() {
-            local env_name=$1
-            local secret_name=$2
-            local secret_value=$3
-            local repo=$4
-            local token=$5
-            
-            # Create temporary Node.js script for secret encryption
-            echo "const sodium = require('libsodium-wrappers');" > encrypt_secret.js
-            echo "" >> encrypt_secret.js
-            echo "async function encryptSecret(publicKey, secret) {" >> encrypt_secret.js
-            echo "  await sodium.ready;" >> encrypt_secret.js
-            echo "  const binkey = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL);" >> encrypt_secret.js
-            echo "  const binsec = sodium.from_string(secret);" >> encrypt_secret.js
-            echo "  const encBytes = sodium.crypto_box_seal(binsec, binkey);" >> encrypt_secret.js
-            echo "  return sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL);" >> encrypt_secret.js
-            echo "}" >> encrypt_secret.js
-            echo "" >> encrypt_secret.js
-            echo "const publicKey = process.argv[2];" >> encrypt_secret.js
-            echo "const secret = process.argv[3];" >> encrypt_secret.js
-            echo "" >> encrypt_secret.js
-            echo "encryptSecret(publicKey, secret)" >> encrypt_secret.js
-            echo "  .then(encrypted => console.log(encrypted))" >> encrypt_secret.js
-            echo "  .catch(err => {" >> encrypt_secret.js
-            echo "    console.error(err);" >> encrypt_secret.js
-            echo "    process.exit(1);" >> encrypt_secret.js
-            echo "  });" >> encrypt_secret.js
-            
-            # Install libsodium-wrappers
-            npm install libsodium-wrappers
-            
-            # Get repository public key
-            PUBLIC_KEY_RESPONSE=$(curl -s -H "Authorization: Bearer $token" \
-              "https://api.github.com/repos/$repo/actions/secrets/public-key")
-            
-            KEY_ID=$(echo "$PUBLIC_KEY_RESPONSE" | jq -r .key_id)
-            PUBLIC_KEY=$(echo "$PUBLIC_KEY_RESPONSE" | jq -r .key)
-            
-            # Encrypt secret using Node.js script
-            ENCRYPTED_SECRET=$(node encrypt_secret.js "$PUBLIC_KEY" "$secret_value")
-            
-            # Clean up temporary files
-            rm encrypt_secret.js
-            rm package.json
-            rm
+          # Chamar o script de criptografia
+          node encrypt_secret.js "${{ github.event.inputs.pat }}" "${{ github.event.inputs.repository }}" "environment.json"
+
+      - name: Cleanup
+        run: rm environment.json
