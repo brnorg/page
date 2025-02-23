@@ -82,14 +82,28 @@ jobs:
             KEY_ID=$(echo "$PUBLIC_KEY_RESPONSE" | jq -r .key_id)
             PUBLIC_KEY=$(echo "$PUBLIC_KEY_RESPONSE" | jq -r .key)
             
-            # Criar ou atualizar secret
-            ENCRYPTED_VALUE=$(echo -n "$secret_value" | openssl base64 -A)
+            # Criar arquivo temporário com a chave pública
+            echo "$PUBLIC_KEY" | base64 --decode > public_key.pem
             
+            # Criptografar o segredo usando a chave pública
+            # Primeiro convertemos o segredo para base64
+            SECRET_B64=$(echo -n "$secret_value" | base64)
+            
+            # Então criptografamos usando a chave pública
+            # Usamos o algoritmo de criptografia RSA-OAEP com SHA-256
+            ENCRYPTED_SECRET=$(echo -n "$SECRET_B64" | openssl pkeyutl -encrypt -pubin \
+              -inkey public_key.pem -pkeyopt rsa_padding_mode:oaep \
+              -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256 | base64 -w 0)
+            
+            # Remover arquivo temporário
+            rm public_key.pem
+            
+            # Enviar o segredo criptografado
             curl -X PUT \
               -H "Authorization: Bearer $token" \
               -H "Accept: application/vnd.github.v3+json" \
               "https://api.github.com/repos/$repo/environments/$env_name/secrets/$secret_name" \
-              -d "{\"encrypted_value\":\"$ENCRYPTED_VALUE\",\"key_id\":\"$KEY_ID\"}"
+              -d "{\"encrypted_value\":\"$ENCRYPTED_SECRET\",\"key_id\":\"$KEY_ID\"}"
             
             echo "Secret $secret_name processed for environment $env_name"
           }
