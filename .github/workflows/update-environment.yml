@@ -31,4 +31,4 @@ jobs:
 
       - name: Run update script
         run: |
-          node path/to/your/script.js ${{ github.event.inputs.pat }} ${{ github.event.inputs.repository }} ${{ github.event.inputs.structure }}
+          node update_environment.mjs ${{ github.event.inputs.pat }} ${{ github.event.inputs.repository }} ${{ github.event.inputs.structure }}
