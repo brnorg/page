@@ -1,0 +1,140 @@
+name: Update Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      pat:
+        description: 'Personal Access Token'
+        required: true
+      repository:
+        description: 'Repository name (owner/repo)'
+        required: true
+      structure:
+        description: 'Environment structure'
+        required: true
+
+jobs:
+  update-environment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PAT and Repository Access
+        run: |
+          # Validar o PAT tentando obter informações do usuário
+          USER_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.pat }}" \
+            https://api.github.com/user)
+          
+          if echo "$USER_RESPONSE" | grep -q "Bad credentials"; then
+            echo "Error: Invalid PAT provided"
+            exit 1
+          fi
+          
+          # Validar acesso ao repositório
+          REPO_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.pat }}" \
+            https://api.github.com/repos/${{ github.event.inputs.repository }})
+          
+          if echo "$REPO_RESPONSE" | grep -q "Not Found"; then
+            echo "Error: Repository not found or no access"
+            exit 1
+          fi
+          
+          echo "PAT and repository access validated successfully"
+
+      - name: Process Environment Structure
+        run: |
+          echo '${{ github.event.inputs.structure }}' > environment.json
+          
+          # Funções auxiliares
+          create_or_update_environment() {
+            local env_name=$1
+            local repo=$2
+            local token=$3
+            
+            # Verificar se o ambiente existe
+            ENV_RESPONSE=$(curl -s -H "Authorization: Bearer $token" \
+              "https://api.github.com/repos/$repo/environments/$env_name")
+            
+            if echo "$ENV_RESPONSE" | grep -q "Not Found"; then
+              # Criar ambiente se não existir
+              curl -X PUT \
+                -H "Authorization: Bearer $token" \
+                -H "Accept: application/vnd.github.v3+json" \
+                "https://api.github.com/repos/$repo/environments/$env_name" \
+                -d '{}'
+              
+              echo "Environment $env_name created"
+            else
+              echo "Environment $env_name already exists"
+            fi
+          }
+          
+          create_or_update_secret() {
+            local env_name=$1
+            local secret_name=$2
+            local secret_value=$3
+            local repo=$4
+            local token=$5
+            
+            # Obter chave pública do repositório
+            PUBLIC_KEY_RESPONSE=$(curl -s -H "Authorization: Bearer $token" \
+              "https://api.github.com/repos/$repo/actions/secrets/public-key")
+            
+            KEY_ID=$(echo "$PUBLIC_KEY_RESPONSE" | jq -r .key_id)
+            PUBLIC_KEY=$(echo "$PUBLIC_KEY_RESPONSE" | jq -r .key)
+            
+            # Criar ou atualizar secret
+            ENCRYPTED_VALUE=$(echo -n "$secret_value" | openssl base64 -A)
+            
+            curl -X PUT \
+              -H "Authorization: Bearer $token" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/$repo/environments/$env_name/secrets/$secret_name" \
+              -d "{\"encrypted_value\":\"$ENCRYPTED_VALUE\",\"key_id\":\"$KEY_ID\"}"
+            
+            echo "Secret $secret_name processed for environment $env_name"
+          }
+          
+          create_or_update_variable() {
+            local env_name=$1
+            local var_name=$2
+            local var_value=$3
+            local repo=$4
+            local token=$5
+            
+            curl -X POST \
+              -H "Authorization: Bearer $token" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/$repo/environments/$env_name/variables" \
+              -d "{\"name\":\"$var_name\",\"value\":\"$var_value\"}"
+            
+            echo "Variable $var_name processed for environment $env_name"
+          }
+          
+          # Processar cada ambiente da estrutura
+          jq -c 'to_entries[]' environment.json | while read -r entry; do
+            ENV_NAME=$(echo "$entry" | jq -r '.key')
+            echo "Processing environment: $ENV_NAME"
+            
+            # Criar ou atualizar ambiente
+            create_or_update_environment "$ENV_NAME" "${{ github.event.inputs.repository }}" "${{ github.event.inputs.pat }}"
+            
+            # Processar secrets
+            echo "$entry" | jq -c '.value.secrets | to_entries[]' | while read -r secret; do
+              SECRET_NAME=$(echo "$secret" | jq -r '.key')
+              SECRET_VALUE=$(echo "$secret" | jq -r '.value')
+              
+              create_or_update_secret "$ENV_NAME" "$SECRET_NAME" "$SECRET_VALUE" \
+                "${{ github.event.inputs.repository }}" "${{ github.event.inputs.pat }}"
+            done
+            
+            # Processar variáveis
+            echo "$entry" | jq -c '.value.vars | to_entries[]' | while read -r var; do
+              VAR_NAME=$(echo "$var" | jq -r '.key')
+              VAR_VALUE=$(echo "$var" | jq -r '.value')
+              
+              create_or_update_variable "$ENV_NAME" "$VAR_NAME" "$VAR_VALUE" \
+                "${{ github.event.inputs.repository }}" "${{ github.event.inputs.pat }}"
+            done
+          done
+
+      - name: Cleanup
+        run: rm environment.json
