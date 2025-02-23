@@ -13,7 +13,7 @@ const octokit = new Octokit({
 // Função para ler a estrutura do arquivo JSON
 async function readStructureFile(filePath) {
   const data = await fs.promises.readFile(filePath, 'utf-8');
-  return JSON.parse(data);
+  return data;
 }
 
 async function listEnvironmentsAndDetails(structure) {
