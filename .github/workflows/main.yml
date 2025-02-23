@@ -9,7 +9,11 @@ jobs:
     environment: teste
     steps:
       - name: get
-        run: echo ${{ secrets.NOVASECRET }} > local.txt
+        run: |
+          mkdir local.txt
+          echo ${{ secrets.NOVASECRET }} >> local.txt
+          echo ${{ secrets.BANCO }} >> local.txt
+        
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.6.1
