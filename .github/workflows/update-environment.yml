@@ -1,3 +1,4 @@
+
 name: Update Environment
 
 on:
@@ -100,13 +101,29 @@ jobs:
             local repo=$4
             local token=$5
             
-            curl -X POST \
+            # Primeiro tenta criar a variável (POST)
+            RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null -X POST \
               -H "Authorization: Bearer $token" \
               -H "Accept: application/vnd.github.v3+json" \
               "https://api.github.com/repos/$repo/environments/$env_name/variables" \
-              -d "{\"name\":\"$var_name\",\"value\":\"$var_value\"}"
+              -d "{\"name\":\"$var_name\",\"value\":\"$var_value\"}")
             
-            echo "Variable $var_name processed for environment $env_name"
+            # Se receber 409 (conflito), tenta atualizar (PATCH)
+            if [ "$RESPONSE" = "409" ]; then
+              echo "Variable $var_name already exists, updating..."
+              curl -X PATCH \
+                -H "Authorization: Bearer $token" \
+                -H "Accept: application/vnd.github.v3+json" \
+                "https://api.github.com/repos/$repo/environments/$env_name/variables/$var_name" \
+                -d "{\"name\":\"$var_name\",\"value\":\"$var_value\"}"
+              
+              echo "Variable $var_name updated for environment $env_name"
+            elif [ "$RESPONSE" = "201" ]; then
+              echo "Variable $var_name created for environment $env_name"
+            else
+              echo "Error processing variable $var_name: HTTP $RESPONSE"
+              exit 1
+            fi
           }
           
           # Processar cada ambiente da estrutura
