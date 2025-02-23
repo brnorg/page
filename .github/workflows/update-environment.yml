@@ -75,58 +75,49 @@ jobs:
             local repo=$4
             local token=$5
             
-            # Criar arquivo temporário para o script Node.js
-            cat << 'EOF' > encrypt_secret.js
+            # Create temporary Node.js script for secret encryption
+            cat > encrypt_secret.js << 'EOFJS'
             const sodium = require('libsodium-wrappers');
 
             async function encryptSecret(publicKey, secret) {
-              // Aguarda o libsodium estar pronto
               await sodium.ready;
-              
-              // Converte a chave pública e o segredo para Uint8Array
               const binkey = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL)
               const binsec = sodium.from_string(secret)
-              
-              // Criptografa o segredo
               const encBytes = sodium.crypto_box_seal(binsec, binkey)
-              
-              // Converte para Base64
               return sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL)
             }
 
-            // Obtem a chave pública e o segredo dos argumentos
             const publicKey = process.argv[2];
             const secret = process.argv[3];
 
-            // Executa a criptografia e imprime o resultado
             encryptSecret(publicKey, secret)
               .then(encrypted => console.log(encrypted))
               .catch(err => {
                 console.error(err);
                 process.exit(1);
               });
-            EOF
+            EOFJS
             
-            # Instala o libsodium-wrappers
+            # Install libsodium-wrappers
             npm install libsodium-wrappers
             
-            # Obter chave pública do repositório
+            # Get repository public key
             PUBLIC_KEY_RESPONSE=$(curl -s -H "Authorization: Bearer $token" \
               "https://api.github.com/repos/$repo/actions/secrets/public-key")
             
             KEY_ID=$(echo "$PUBLIC_KEY_RESPONSE" | jq -r .key_id)
             PUBLIC_KEY=$(echo "$PUBLIC_KEY_RESPONSE" | jq -r .key)
             
-            # Criptografa o segredo usando o script Node.js
+            # Encrypt secret using Node.js script
             ENCRYPTED_SECRET=$(node encrypt_secret.js "$PUBLIC_KEY" "$secret_value")
             
-            # Remove arquivos temporários
+            # Clean up temporary files
             rm encrypt_secret.js
             rm package.json
             rm package-lock.json
             rm -rf node_modules
             
-            # Envia o segredo criptografado
+            # Send encrypted secret
             curl -X PUT \
               -H "Authorization: Bearer $token" \
               -H "Accept: application/vnd.github.v3+json" \
@@ -143,14 +134,14 @@ jobs:
             local repo=$4
             local token=$5
             
-            # Primeiro tenta criar a variável (POST)
+            # First try to create variable (POST)
             RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null -X POST \
               -H "Authorization: Bearer $token" \
               -H "Accept: application/vnd.github.v3+json" \
               "https://api.github.com/repos/$repo/environments/$env_name/variables" \
               -d "{\"name\":\"$var_name\",\"value\":\"$var_value\"}")
             
-            # Se receber 409 (conflito), tenta atualizar (PATCH)
+            # If 409 (conflict), try update (PATCH)
             if [ "$RESPONSE" = "409" ]; then
               echo "Variable $var_name already exists, updating..."
               curl -X PATCH \
@@ -168,15 +159,15 @@ jobs:
             fi
           }
           
-          # Processar cada ambiente da estrutura
+          # Process each environment from structure
           jq -c 'to_entries[]' environment.json | while read -r entry; do
             ENV_NAME=$(echo "$entry" | jq -r '.key')
             echo "Processing environment: $ENV_NAME"
             
-            # Criar ou atualizar ambiente
+            # Create or update environment
             create_or_update_environment "$ENV_NAME" "${{ github.event.inputs.repository }}" "${{ github.event.inputs.pat }}"
             
-            # Processar secrets
+            # Process secrets
             echo "$entry" | jq -c '.value.secrets | to_entries[]' | while read -r secret; do
               SECRET_NAME=$(echo "$secret" | jq -r '.key')
               SECRET_VALUE=$(echo "$secret" | jq -r '.value')
@@ -185,7 +176,7 @@ jobs:
                 "${{ github.event.inputs.repository }}" "${{ github.event.inputs.pat }}"
             done
             
-            # Processar variáveis
+            # Process variables
             echo "$entry" | jq -c '.value.vars | to_entries[]' | while read -r var; do
               VAR_NAME=$(echo "$var" | jq -r '.key')
               VAR_VALUE=$(echo "$var" | jq -r '.value')
