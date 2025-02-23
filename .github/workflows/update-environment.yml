@@ -29,6 +29,8 @@ jobs:
         run: |
           npm install @octokit/rest libsodium-wrappers
 
+      - name: cria arquivo
+        run: echo " ${{ github.event.inputs.structure }}" > estrutura.json
       - name: Run update script
         run: |
-          node update_environment.mjs ${{ github.event.inputs.pat }} ${{ github.event.inputs.repository }} ${{ github.event.inputs.structure }}
+          node update_environment.mjs ${{ github.event.inputs.pat }} ${{ github.event.inputs.repository }} estrutura.json
