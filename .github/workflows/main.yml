@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: get
         run: |
-          mkdir local.txt
+          touch local.txt
           echo "${{ secrets.NOVASECRET }}" >> local.txt
           echo "${{ secrets.BANCO }}" >> local.txt
         
