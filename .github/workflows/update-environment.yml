@@ -10,29 +10,25 @@ on:
         description: 'Repository name (owner/repo)'
         required: true
       structure:
-        description: 'Environment structure'
+        description: 'Path to the environment structure JSON file'
         required: true
 
 jobs:
   update-environment:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: '14'  # ou a versão que você preferir
+          node-version: '18' # ou a versão que você preferir
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
-          npm install @octokit/rest@^21.0.0 libsodium-wrappers@^0.7.13
+          npm install @octokit/rest libsodium-wrappers
 
-      - name: Process Environment Structure
+      - name: Run update script
         run: |
-          echo '${{ github.event.inputs.structure }}' > environment.json
-          node update_environment.mjs "${{ github.event.inputs.pat }}" "${{ github.event.inputs.repository }}" "environment.json"
-
-      - name: Cleanup
-        run: rm environment.json
+          node path/to/your/script.js ${{ github.event.inputs.pat }} ${{ github.event.inputs.repository }} ${{ github.event.inputs.structure }}
