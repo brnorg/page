@@ -75,27 +75,25 @@ jobs:
             local token=$5
             
             # Create temporary Node.js script for secret encryption
-            cat > encrypt_secret.js << 'EOFJS'
-            const sodium = require('libsodium-wrappers');
-
-            async function encryptSecret(publicKey, secret) {
-              await sodium.ready;
-              const binkey = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL)
-              const binsec = sodium.from_string(secret)
-              const encBytes = sodium.crypto_box_seal(binsec, binkey)
-              return sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL)
-            }
-
-            const publicKey = process.argv[2];
-            const secret = process.argv[3];
-
-            encryptSecret(publicKey, secret)
-              .then(encrypted => console.log(encrypted))
-              .catch(err => {
-                console.error(err);
-                process.exit(1);
-              });
-            EOFJS
+            echo "const sodium = require('libsodium-wrappers');" > encrypt_secret.js
+            echo "" >> encrypt_secret.js
+            echo "async function encryptSecret(publicKey, secret) {" >> encrypt_secret.js
+            echo "  await sodium.ready;" >> encrypt_secret.js
+            echo "  const binkey = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL);" >> encrypt_secret.js
+            echo "  const binsec = sodium.from_string(secret);" >> encrypt_secret.js
+            echo "  const encBytes = sodium.crypto_box_seal(binsec, binkey);" >> encrypt_secret.js
+            echo "  return sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL);" >> encrypt_secret.js
+            echo "}" >> encrypt_secret.js
+            echo "" >> encrypt_secret.js
+            echo "const publicKey = process.argv[2];" >> encrypt_secret.js
+            echo "const secret = process.argv[3];" >> encrypt_secret.js
+            echo "" >> encrypt_secret.js
+            echo "encryptSecret(publicKey, secret)" >> encrypt_secret.js
+            echo "  .then(encrypted => console.log(encrypted))" >> encrypt_secret.js
+            echo "  .catch(err => {" >> encrypt_secret.js
+            echo "    console.error(err);" >> encrypt_secret.js
+            echo "    process.exit(1);" >> encrypt_secret.js
+            echo "  });" >> encrypt_secret.js
             
             # Install libsodium-wrappers
             npm install libsodium-wrappers
