@@ -32,7 +32,7 @@ jobs:
       - name: Process Environment Structure
         run: |
           echo '${{ github.event.inputs.structure }}' > environment.json
-          node update_environment.js "${{ github.event.inputs.pat }}" "${{ github.event.inputs.repository }}" "environment.json"
+          node update_environment.mjs "${{ github.event.inputs.pat }}" "${{ github.event.inputs.repository }}" "environment.json"
 
       - name: Cleanup
         run: rm environment.json
