@@ -111,20 +111,4 @@ jobs:
             # Clean up temporary files
             rm encrypt_secret.js
             rm package.json
-            rm package-lock.json
-            rm -rf node_modules
-            
-            # Send encrypted secret
-            curl -X PUT \
-              -H "Authorization: Bearer $token" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/repos/$repo/environments/$env_name/secrets/$secret_name" \
-              -d "{\"encrypted_value\":\"$ENCRYPTED_SECRET\",\"key_id\":\"$KEY_ID\"}"
-            
-            echo "Secret $secret_name processed for environment $env_name"
-          }
-          
-          create_or_update_variable() {
-            local env_name=$1
-            local var_name=$2
-            local var_value=$3
+            rm
