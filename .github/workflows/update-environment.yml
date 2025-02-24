@@ -19,8 +19,10 @@ jobs:
     env:
       SECRETSMANAGER: '${{ github.event.inputs.structure }}'
     steps:
-      - secure:
+      - name: secure
+        run: |
           echo ''::add-mask::env.SECRETSMANAGER'
+          
       - name: Validate PAT and Repository Access
         run: |
           # Validar o PAT tentando obter informações do usuário
