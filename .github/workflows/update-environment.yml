@@ -285,9 +285,9 @@ jobs:
           node-version: '18'
           cache: npm
 
-      # - name: Install dependencies
-      #   run: |
-      #     npm install @octokit/rest@21.0.0 libsodium-wrappers@0.7.13
+      - name: Install dependencies
+        run: |
+          npm install
 
       - name: uppdate environments
         uses: actions/github-script@v7
