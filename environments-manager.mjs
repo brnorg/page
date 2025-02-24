@@ -14,7 +14,7 @@ async function createOrUpdateSecretsAndVars() {
     // Verifica se o ambiente existe, se não, cria um novo
     try {
       await octokit.request('GET /repos/{owner}/{repo}/environments/{environment_name}', {
-        owner,
+        owner: owner,
         repo: repository,
         environment_name: environmentName,
         headers: {
@@ -26,7 +26,7 @@ async function createOrUpdateSecretsAndVars() {
       if (error.status === 404) {
         console.log("O ambiente não existe, criando um novo")
         await octokit.request('PUT /repos/{owner}/{repo}/environments/{environment_name}', {
-          owner,
+          owner: owner,
           repo: repository,
           environment_name: environmentName,
           headers: {
@@ -41,7 +41,7 @@ async function createOrUpdateSecretsAndVars() {
 
     // Obter a chave pública para criptografar os segredos
     const { data: { key: publicKey, key_id: keyId } } = await octokit.request('GET /repos/{owner}/{repo}/environments/{environment_name}/secrets/public-key', {
-      owner,
+      owner: owner,
       repo: repository,
       environment_name: environmentName,
       headers: {
@@ -58,7 +58,7 @@ async function createOrUpdateSecretsAndVars() {
       const encryptedValue = sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL);
 
       await octokit.request('PUT /repos/{owner}/{repo}/environments/{environment_name}/secrets/{secret_name}', {
-        owner,
+        owner: owner,
         repo: repository,
         environment_name: environmentName,
         secret_name: secretName,
@@ -76,7 +76,7 @@ async function createOrUpdateSecretsAndVars() {
     for (const [varName, varValue] of Object.entries(vars)) {
       try {
         await octokit.request('PATCH /repos/{owner}/{repo}/actions/variables/{name}', {
-          owner,
+          owner: owner,
           repo: repository,
           name: varName,
           value: varValue,
@@ -90,7 +90,7 @@ async function createOrUpdateSecretsAndVars() {
           // Se
           // Se a variável não existir, crie-a
           await octokit.request('POST /repos/{owner}/{repo}/actions/variables', {
-            owner,
+            owner: owner,
             repo: repository,
             name: varName,
             value: varValue, // Usando varValue corretamente
