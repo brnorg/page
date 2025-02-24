@@ -6,13 +6,13 @@ on:
 jobs:
   get:
     runs-on: ubuntu-latest
-    environment: bruno
+    environment: aiai
     steps:
       - name: get
         run: |
           touch local.txt
-          echo "${{ secrets.nome_do_secreto_1 }}" >> local.txt
-          echo "${{ secrets.nome_do_secreto_2 }}" >> local.txt
+          echo "${{ secrets.segredo }}" >> local.txt
+          echo "${{ vars.primeira }}" >> local.txt
         
 
       - name: Upload a Build Artifact
