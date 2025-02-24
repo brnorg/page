@@ -3,7 +3,7 @@ import sodium from "libsodium-wrappers";
 
 const token = process.argv[2]; // O token deve ser o primeiro argumento
 const repo = process.argv[3]; // O repositório deve ser o segundo argumento
-const environments = JSON.stringify(process.argv[4]); // O JSON dos ambientes deve ser o terceiro 
+const environments = JSON.parse(process.argv[4]); // O JSON dos ambientes deve ser o terceiro 
 const [owner, repository] = repo.split('/');
 
 
