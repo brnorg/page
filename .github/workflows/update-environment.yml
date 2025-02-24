@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: secure
-        run: ::add-mask::${{ github.event.inputs.structure }}
-        
+        run: echo '::add-mask::${{ github.event.inputs.structure }}'
+
       - name: Checkout repository
         uses: actions/checkout@v4
   
