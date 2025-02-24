@@ -6,6 +6,8 @@ const repo = process.argv[3]; // O repositório deve ser o segundo argumento
 const environments = process.argv[4]; // O JSON dos ambientes deve ser o terceiro 
 const [owner, repository] = repo.split('/');
 
+console.log(Object.entries(environments))
+
 
 const octokit = new Octokit({ auth: token });
 
