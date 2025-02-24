@@ -1,20 +1,20 @@
 import { Octokit } from "@octokit/rest";
 import sodium from "libsodium-wrappers";
 
-
 const token = process.argv[2]; // O token deve ser o primeiro argumento
 const repo = process.argv[3]; // O repositório deve ser o segundo argumento
 const environments = process.argv[4]; // O JSON dos ambientes deve ser o terceiro 
 const [owner, repository] = repo.split('/');
 
-const octokit = new Octokit({ auth: `${token}` });          
+
+const octokit = new Octokit({ auth: token });
 
 async function createOrUpdateSecretsAndVars() {
   for (const [environmentName, { secrets, vars }] of Object.entries(environments)) {
     // Verifica se o ambiente existe, se não, cria um novo
     try {
       await octokit.request('GET /repos/{owner}/{repo}/environments/{environment_name}', {
-        owner: owner,
+        owner,
         repo: repository,
         environment_name: environmentName,
         headers: {
@@ -24,9 +24,10 @@ async function createOrUpdateSecretsAndVars() {
       console.log(`Environment '${environmentName}' already exists.`);
     } catch (error) {
       if (error.status === 404) {
-        console.log("O ambiente não existe, criando um novo")
-        await octokit.request('PUT /repos/{owner}/{repo}/environments/{environment_name}', {
-          owner: owner,
+        // O ambiente não existe, então cria um novo
+        console.log("O ambiente não existe, então cria um novo")
+        await octokit.request('PUT /repos/{owner}/{repo}/environments/', {
+          owner,
           repo: repository,
           environment_name: environmentName,
           headers: {
@@ -36,12 +37,14 @@ async function createOrUpdateSecretsAndVars() {
         console.log(`Environment '${environmentName}' created.`);
       } else {
         console.error(`Error checking environment '${environmentName}':`, error);
+        // console.log("Pula para o próximo ambiente em caso de erro")
+        // continue; // Pula para o próximo ambiente em caso de erro
       }
     }
 
     // Obter a chave pública para criptografar os segredos
     const { data: { key: publicKey, key_id: keyId } } = await octokit.request('GET /repos/{owner}/{repo}/environments/{environment_name}/secrets/public-key', {
-      owner: owner,
+      owner,
       repo: repository,
       environment_name: environmentName,
       headers: {
@@ -58,7 +61,7 @@ async function createOrUpdateSecretsAndVars() {
       const encryptedValue = sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL);
 
       await octokit.request('PUT /repos/{owner}/{repo}/environments/{environment_name}/secrets/{secret_name}', {
-        owner: owner,
+        owner,
         repo: repository,
         environment_name: environmentName,
         secret_name: secretName,
@@ -76,7 +79,7 @@ async function createOrUpdateSecretsAndVars() {
     for (const [varName, varValue] of Object.entries(vars)) {
       try {
         await octokit.request('PATCH /repos/{owner}/{repo}/actions/variables/{name}', {
-          owner: owner,
+          owner,
           repo: repository,
           name: varName,
           value: varValue,
@@ -90,7 +93,7 @@ async function createOrUpdateSecretsAndVars() {
           // Se
           // Se a variável não existir, crie-a
           await octokit.request('POST /repos/{owner}/{repo}/actions/variables', {
-            owner: owner,
+            owner,
             repo: repository,
             name: varName,
             value: varValue, // Usando varValue corretamente
