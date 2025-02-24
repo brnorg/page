@@ -17,6 +17,29 @@ jobs:
   update-environment:
     runs-on: ubuntu-latest
     steps:
+
+      - name: Validate PAT and Repository Access
+        run: |
+          # Validar o PAT tentando obter informações do usuário
+          USER_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.pat }}" \
+            https://api.github.com/user)
+          
+          if echo "$USER_RESPONSE" | grep -q "Bad credentials"; then
+            echo "Error: Invalid PAT provided"
+            exit 1
+          fi
+          
+          # Validar acesso ao repositório
+          REPO_RESPONSE=$(curl -s -H "Authorization: Bearer ${{ github.event.inputs.pat }}" \
+            https://api.github.com/repos/${{ github.event.inputs.repository }})
+          
+          if echo "$REPO_RESPONSE" | grep -q "Not Found"; then
+            echo "Error: Repository not found or no access"
+            exit 1
+          fi
+          
+          echo "PAT and repository access validated successfully"
+
       - name: Checkout repository
         uses: actions/checkout@v4
   
