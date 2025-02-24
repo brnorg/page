@@ -9,6 +9,8 @@ const [owner, repository] = repo.split('/');
 
 const octokit = new Octokit({ auth: token });
 
+console.log(Object.entries(environments))
+
 async function createOrUpdateSecretsAndVars() {
   for (const [environmentName, { secrets, vars }] of Object.entries(environments)) {
     // Verifica se o ambiente existe, se não, cria um novo
