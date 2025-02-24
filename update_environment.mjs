@@ -1,8 +1,8 @@
 const { Octokit } = require("@octokit/core");
 const sodium = require('libsodium-wrappers');
 
-const token = 'YOUR-TOKEN'; // Substitua pelo seu token PAT
-const repo = 'org/repository'; // Substitua pelo seu repositório
+const token = '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'; // Substitua pelo seu token PAT
+const repo = 'brninc-teste/page'; // Substitua pelo seu repositório
 const [owner, repository] = repo.split('/');
 
 const environments = {
@@ -95,6 +95,7 @@ async function createOrUpdateSecretsAndVars() {
     // Criação ou atualização de variáveis
     for (const [varName, varValue] of Object.entries(vars)) {
       try {
+        await octokit.request('PATCH /repos/{owner}/{repo}/
         await octokit.request('PATCH /repos/{owner}/{repo}/actions/variables/{name}', {
           owner,
           repo: repository,
@@ -112,8 +113,7 @@ async function createOrUpdateSecretsAndVars() {
             owner,
             repo: repository,
             name: varName,
-            value: var
-            value: varValue,
+            value: varValue, // Usando varValue corretamente
             headers: {
               'X-GitHub-Api-Version': '2022-11-28'
             }
