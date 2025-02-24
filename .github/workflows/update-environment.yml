@@ -21,8 +21,8 @@ jobs:
     steps:
       - name: secure
         run: |
-          echo ''::add-mask::env.SECRETSMANAGER'
-          
+          echo '::add-mask::env.SECRETSMANAGER'
+
       - name: Validate PAT and Repository Access
         run: |
           # Validar o PAT tentando obter informações do usuário
