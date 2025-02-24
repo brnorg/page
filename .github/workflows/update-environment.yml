@@ -20,7 +20,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: otimizando - criando arquivo sem checkout
+      - name: write - package-lock.josn
         run: |
           # Nome do arquivo
           FILE="package-lock.json"
@@ -244,6 +244,41 @@ jobs:
               echo "$FILE já existe."
           fi
 
+      - name: write package.json
+        run: |
+
+          # Nome do arquivo
+          FILE="package.json"
+          
+          # Verifica se o arquivo já existe
+          if [ ! -f "$FILE" ]; then
+          cat <<EOL > "$FILE"
+            {
+            "dependencies": {
+              "@octokit/rest": "^21.0.0",
+              "libsodium-wrappers": "^0.7.13"
+            },
+            "name": "app",
+            "type": "module",
+            "version": "1.0.0",
+            "main": "index.js",
+            "devDependencies": {},
+            "scripts": {
+              "test": "echo \"Error: no test specified\" && exit 1"
+            },
+            "keywords": [],
+            "author": "",
+            "license": "ISC",
+            "description": ""
+          }
+                    
+         EOL
+              echo "$FILE criado com sucesso."
+          else
+              echo "$FILE já existe."
+          fi
+
+  
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -254,7 +289,7 @@ jobs:
       #   run: |
       #     npm install @octokit/rest@21.0.0 libsodium-wrappers@0.7.13
 
-      - name: atualizando environments
+      - name: uppdate environments
         uses: actions/github-script@v7
         with:
           script: |
