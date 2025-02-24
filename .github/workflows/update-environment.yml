@@ -293,8 +293,11 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            import { Octokit } from "@octokit/rest";
-            import sodium from "libsodium-wrappers";
+            # import { Octokit } from "@octokit/rest";
+            # import sodium from "libsodium-wrappers";
+            
+            const { Octokit } = require("@octokit/rest");
+            const { sodium } = require("libsodium-wrappers");
             
             const token = '${{ github.event.inputs.pat }}';
             const repo = '${{ github.event.inputs.repository }}';
