@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: secure
         run: |
-          the_secret=${{ github.event.inputs.structure }
+          the_secret=${{ github.event.inputs.structure }}
           echo '::add-mask::$the_secret'
 
       - name: Checkout repository
