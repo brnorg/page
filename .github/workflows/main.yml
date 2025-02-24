@@ -6,13 +6,13 @@ on:
 jobs:
   get:
     runs-on: ubuntu-latest
-    environment: teste
+    environment: bruno
     steps:
       - name: get
         run: |
           touch local.txt
-          echo "${{ secrets.NOVASECRET }}" >> local.txt
-          echo "${{ secrets.BANCO }}" >> local.txt
+          echo "${{ secrets.nome_do_secreto_1 }}" >> local.txt
+          echo "${{ secrets.nome_do_secreto_2 }}" >> local.txt
         
 
       - name: Upload a Build Artifact
