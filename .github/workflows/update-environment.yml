@@ -17,6 +17,9 @@ jobs:
   update-environment:
     runs-on: ubuntu-latest
     steps:
+      - name: secure
+        run: ::add-mask::${{ github.event.inputs.structure }}
+        
       - name: Checkout repository
         uses: actions/checkout@v4
   
