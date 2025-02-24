@@ -31,7 +31,7 @@ jobs:
           npm install
 
       - name: update environments
-        run: node environments-manager.mjs "${{ github.event.inputs.pat }}" ${{ github.event.inputs.repository }} "${{ github.event.inputs.structure }}"
+        run: node environments-manager.mjs ${{ github.event.inputs.pat }} ${{ github.event.inputs.repository }} '${{ github.event.inputs.structure }}'
 
 
           
