@@ -28,7 +28,7 @@ async function createOrUpdateSecretsAndVars() {
       if (error.status === 404) {
         // O ambiente não existe, então cria um novo
         console.log("O ambiente não existe, então cria um novo")
-        await octokit.request('PUT /repos/{owner}/{repo}/environments/', {
+        await octokit.request('PUT /repos/{owner}/{repo}/environments/{environment_name}', {
           owner,
           repo: repository,
           environment_name: environmentName,
