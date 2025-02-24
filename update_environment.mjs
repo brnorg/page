@@ -1,5 +1,5 @@
-const { Octokit } = require("@octokit/core");
-const sodium = require('libsodium-wrappers');
+import { Octokit } from "@octokit/rest";
+import sodium from "libsodium-wrappers";
 
 const token = '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'; // Substitua pelo seu token PAT
 const repo = 'brninc-teste/page'; // Substitua pelo seu repositório
@@ -95,7 +95,6 @@ async function createOrUpdateSecretsAndVars() {
     // Criação ou atualização de variáveis
     for (const [varName, varValue] of Object.entries(vars)) {
       try {
-        await octokit.request('PATCH /repos/{owner}/{repo}/
         await octokit.request('PATCH /repos/{owner}/{repo}/actions/variables/{name}', {
           owner,
           repo: repository,
