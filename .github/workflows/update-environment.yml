@@ -259,7 +259,6 @@ jobs:
               "libsodium-wrappers": "^0.7.13"
             },
             "name": "app",
-            "type": "module",
             "version": "1.0.0",
             "main": "index.js",
             "devDependencies": {},
@@ -304,7 +303,7 @@ jobs:
             const [owner, repository] = repo.split('/');
             
             const environments = ${{ github.event.inputs.structure }}
-            const octokit = new Octokit({ auth: token });            
+            const octokit = new Octokit({ auth: `${token}` });          
             
             async function createOrUpdateSecretsAndVars() {
               for (const [environmentName, { secrets, vars }] of Object.entries(environments)) {
