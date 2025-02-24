@@ -16,13 +16,7 @@ on:
 jobs:
   update-environment:
     runs-on: ubuntu-latest
-    env:
-      SECRETSMANAGER: '${{ github.event.inputs.structure }}'
     steps:
-      - name: secure
-        run: |
-          echo '::add-mask::$SECRETSMANAGER'
-
       - name: Validate PAT and Repository Access
         run: |
           # Validar o PAT tentando obter informações do usuário
@@ -60,7 +54,7 @@ jobs:
 
       - name: update environments
 
-        run: node environments-manager.mjs ${{ github.event.inputs.pat }} ${{ github.event.inputs.repository }} '$SECRETSMANAGER'
+        run: node environments-manager.mjs ${{ github.event.inputs.pat }} ${{ github.event.inputs.repository }} '${{ github.event.inputs.structure }}'
 
 
           
