@@ -272,11 +272,11 @@ jobs:
             "description": ""
           }
                     
-         EOL
-              echo "$FILE criado com sucesso."
-          else
-              echo "$FILE já existe."
-          fi
+          EOL
+                echo "$FILE criado com sucesso."
+            else
+                echo "$FILE já existe."
+            fi
 
   
       - name: Set up Node.js
