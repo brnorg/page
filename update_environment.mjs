@@ -1,107 +1,130 @@
-import { Octokit } from "@octokit/rest";
-import sodium from "libsodium-wrappers";
-import fs from "fs";
+const { Octokit } = require("@octokit/core");
+const sodium = require('libsodium-wrappers');
 
-const token = process.argv[2]; // Token de acesso do GitHub
-const repo = process.argv[3]; // Nome do repositório
-const structureFile = process.argv[4]; // Arquivo JSON com a estrutura
+const token = 'YOUR-TOKEN'; // Substitua pelo seu token PAT
+const repo = 'org/repository'; // Substitua pelo seu repositório
+const [owner, repository] = repo.split('/');
 
-const octokit = new Octokit({
-  auth: token
-});
+const environments = {
+  "nome_do_ambiente_1": {
+    "secrets": {
+      "nome_do_secreto_1": "valor_do_secreto_1",
+      "nome_do_secreto_2": "valor_do_secreto_2"
+    },
+    "vars": {
+      "nome_da_variavel_1": "valor_da_variavel_1",
+      "nome_da_variavel_2": "valor_da_variavel_2"
+    }
+  },
+  "nome_do_ambiente_2": {
+    "secrets": {
+      "nome_do_secreto_3": "valor_do_secreto_3"
+    },
+    "vars": {
+      "nome_da_variavel_3": "valor_da_variavel_3"
+    }
+  }
+};
 
-// Função para ler a estrutura do arquivo JSON
-async function readStructureFile(filePath) {
-  const data = await fs.promises.readFile(filePath, 'utf-8');
-  return data;
-}
+const octokit = new Octokit({ auth: token });
 
-async function listEnvironmentsAndDetails(structure) {
-  await sodium.ready; // Aguarda o carregamento do sodium
-
-  try {
-    const environments = Object.keys(structure);
-
-    for (const environmentName of environments) {
-      console.log(`\nEnvironment: ${environmentName}`);
-
-      // Criar ou atualizar o ambiente
-      try {
-        await octokit.request('PUT /repos/{owner}/{repo}/environments/{environment_name}', {
-          owner: repo.split('/')[0],
-          repo: repo.split('/')[1],
-          environment_name: environmentName
+async function createOrUpdateSecretsAndVars() {
+  for (const [environmentName, { secrets, vars }] of Object.entries(environments)) {
+    // Verifica se o ambiente existe, se não, cria um novo
+    try {
+      await octokit.request('GET /repos/{owner}/{repo}/environments/{environment_name}', {
+        owner,
+        repo: repository,
+        environment_name: environmentName,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+      console.log(`Environment '${environmentName}' already exists.`);
+    } catch (error) {
+      if (error.status === 404) {
+        // O ambiente não existe, então cria um novo
+        await octokit.request('POST /repos/{owner}/{repo}/environments', {
+          owner,
+          repo: repository,
+          environment_name: environmentName,
+          headers: {
+            'X-GitHub-Api-Version': '2022-11-28'
+          }
         });
-        console.log(`Environment ${environmentName} created/updated`);
+        console.log(`Environment '${environmentName}' created.`);
+      } else {
+        console.error(`Error checking environment '${environmentName}':`, error);
+        continue; // Pula para o próximo ambiente em caso de erro
+      }
+    }
+
+    // Obter a chave pública para criptografar os segredos
+    const { data: { key: publicKey, key_id: keyId } } = await octokit.request('GET /repos/{owner}/{repo}/environments/{environment_name}/secrets/public-key', {
+      owner,
+      repo: repository,
+      environment_name: environmentName,
+      headers: {
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    });
+
+    // Criação ou atualização de segredos
+    for (const [secretName, secretValue] of Object.entries(secrets)) {
+      await sodium.ready;
+      const binkey = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL);
+      const binsec = sodium.from_string(secretValue);
+      const encBytes = sodium.crypto_box_seal(binsec, binkey);
+      const encryptedValue = sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL);
+
+      await octokit.request('PUT /repos/{owner}/{repo}/environments/{environment_name}/secrets/{secret_name}', {
+        owner,
+        repo: repository,
+        environment_name: environmentName,
+        secret_name: secretName,
+        encrypted_value: encryptedValue,
+        key_id: keyId,
+        headers: {
+          'X-GitHub-Api-Version': '2022-11-28'
+        }
+      });
+
+      console.log(`Secret '${secretName}' created/updated in environment '${environmentName}'.`);
+    }
+
+    // Criação ou atualização de variáveis
+    for (const [varName, varValue] of Object.entries(vars)) {
+      try {
+        await octokit.request('PATCH /repos/{owner}/{repo}/actions/variables/{name}', {
+          owner,
+          repo: repository,
+          name: varName,
+          value: varValue,
+          headers: {
+            'X-GitHub-Api-Version': '2022-11-28'
+          }
+        });
+        console.log(`Variable '${varName}' updated in environment '${environmentName}'.`);
       } catch (error) {
-        console.error(`Erro ao criar/atualizar o ambiente ${environmentName}: ${error.message}`);
-        continue;
-      }
-
-      // Processar segredos
-      const secrets = structure[environmentName].secrets || {};
-      for (const [secretName, secretValue] of Object.entries(secrets)) {
-        // Obter a chave pública para criptografar segredos
-        let publicKey, publicKeyId;
-        try {
-          const publicKeyResponse = await octokit.request('GET /repos/{owner}/{repo}/actions/secrets/public-key', {
-            owner: repo.split('/')[0],
-            repo: repo.split('/')[1]
-          });
-          publicKey = publicKeyResponse.data.key;
-          publicKeyId = publicKeyResponse.data.key_id;
-        } catch (error) {
-          console.error(`Erro ao obter a chave pública: ${error.message}`);
-          continue;
-        }
-
-        // Criptografar o valor do segredo
-        const binkey = sodium.from_base64(publicKey, sodium.base64_variants.ORIGINAL);
-        const binsec = sodium.from_string(secretValue);
-        const encBytes = sodium.crypto_box_seal(binsec, binkey);
-        const encryptedValue = sodium.to_base64(encBytes, sodium.base64_variants.ORIGINAL);
-
-        // Atualizar segredo
-        try {
-          await octokit.request('PUT /repos/{owner}/{repo}/environments/{environment_name}/secrets/{secret_name}', {
-            owner: repo.split('/')[0],
-            repo: repo.split('/')[1],
-            environment_name: environmentName,
-            secret_name: secretName,
-            encrypted_value: encryptedValue,
-            key_id: publicKeyId
-          });
-          console.log(`Updated secret ${secretName} in environment ${environmentName}`);
-        } catch (error) {
-          console.error(`Erro ao atualizar o segredo ${secretName} no ambiente ${environmentName}: ${error.message}`);
-        }
-      }
-
-      // Processar variáveis
-      const variables = structure[environmentName].vars || {};
-      for (const [varName, varValue] of Object.entries(variables)) {
-        // Atualizar variável
-        try {
-          await octokit.request('PATCH /repos/{owner}/{repo}/environments/{environment_name}/variables/{name}', {
-            owner: repo.split('/')[0],
-            repo: repo.split('/')[1],
-            environment_name: environmentName,
+        if (error.status === 404) {
+          // Se a variável não existir, crie-a
+          await octokit.request('POST /repos/{owner}/{repo}/actions/variables', {
+            owner,
+            repo: repository,
             name: varName,
-            value: varValue
+            value: var
+            value: varValue,
+            headers: {
+              'X-GitHub-Api-Version': '2022-11-28'
+            }
           });
-          console.log(`Updated variable ${varName} in environment ${environmentName}`);
-        } catch (error) {
-          console.error(`Erro ao atualizar a variável ${varName} no ambiente ${environmentName}: ${error.message}`);
+          console.log(`Variable '${varName}' created in environment '${environmentName}'.`);
+        } else {
+          console.error(`Error updating/creating variable '${varName}':`, error);
         }
       }
     }
-  } catch (error) {
-    console.error(`Erro: ${error.message}`);
   }
 }
 
-// Executar a função principal
-(async () => {
-  const structure = await readStructureFile(structureFile);
-  await listEnvironmentsAndDetails(structure);
-})();
+createOrUpdateSecretsAndVars().catch(console.error);
